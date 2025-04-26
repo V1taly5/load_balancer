@@ -15,8 +15,9 @@ type Config struct {
 }
 
 type HTTPServer struct {
-	Port    int           `yaml:"port"`
-	Timeout time.Duration `yaml:"timeout"`
+	Port        int           `yaml:"port"`
+	Timeout     time.Duration `yaml:"timeout"`
+	IdleTimeout time.Duration `yaml:"idle_timeout"`
 }
 
 type Backend struct {
