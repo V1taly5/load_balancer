@@ -9,9 +9,10 @@ import (
 )
 
 type Config struct {
-	Env      string     `yaml:"env"`
-	Server   HTTPServer `yaml:"httpserver"`
-	Backends []Backend  `yaml:"backends"`
+	Env           string        `yaml:"env"`
+	Server        HTTPServer    `yaml:"httpserver"`
+	Backends      []Backend     `yaml:"backends"`
+	HealthChecker HealthChecker `yaml:"health_checker"`
 }
 
 type HTTPServer struct {
@@ -22,6 +23,12 @@ type HTTPServer struct {
 
 type Backend struct {
 	URL string `yaml:"url"`
+}
+
+type HealthChecker struct {
+	Interval   time.Duration `yaml:"interval"`
+	HealthPath string        `yaml:"health_path"`
+	Timeout    time.Duration `yaml:"timeout"`
 }
 
 func Load(configPath string) (*Config, error) {
