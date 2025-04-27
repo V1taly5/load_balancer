@@ -13,6 +13,7 @@ type Config struct {
 	Server        HTTPServer    `yaml:"httpserver"`
 	Backends      []Backend     `yaml:"backends"`
 	HealthChecker HealthChecker `yaml:"health_checker"`
+	RateLimiter   RateLimiter   `yaml:"rate_limiter"`
 }
 
 type HTTPServer struct {
@@ -29,6 +30,15 @@ type HealthChecker struct {
 	Interval   time.Duration `yaml:"interval"`
 	HealthPath string        `yaml:"health_path"`
 	Timeout    time.Duration `yaml:"timeout"`
+}
+
+type RateLimiter struct {
+	Enabled         bool          `yaml:"enabled"`
+	DefaultCapacity float64       `yaml:"default_capacity"`
+	DefaultRate     float64       `yaml:"default_rate"`
+	CleanupInterval time.Duration `yaml:"cleanup_interval"`
+	BucketTTL       time.Duration `yaml:"bucket_ttl"`
+	HeaderIP        string        `yaml:"header_ip"`
 }
 
 func Load(configPath string) (*Config, error) {
