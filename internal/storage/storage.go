@@ -2,6 +2,7 @@ package storage
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -19,8 +20,15 @@ type FileStorage struct {
 	mu       sync.Mutex
 }
 
-func NewFileStorage(filePath string) *FileStorage {
-	return &FileStorage{filePath: filePath}
+func NewFileStorage(filePath string) (*FileStorage, error) {
+	if _, err := os.Stat(filePath); err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("file not found: %w", err)
+		} else {
+			return nil, fmt.Errorf("file verification error: %w", err)
+		}
+	}
+	return &FileStorage{filePath: filePath}, nil
 }
 
 // Cохраняет состояние клиента
