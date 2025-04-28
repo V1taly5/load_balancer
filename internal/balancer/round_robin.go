@@ -65,7 +65,7 @@ func (rr *RoundRobinBalancer) MarkAsDown(backend *Backend) {
 		return
 	}
 
-	// можно ставить пометку isDown после нескольких неудачных запросов
+	//TODO: можно ставить пометку isDown после нескольких неудачных запросов
 	backend.SetHealth(true)
 	rr.log.Error("backend marked as down", slog.String("url", backend.URL.String()))
 }
