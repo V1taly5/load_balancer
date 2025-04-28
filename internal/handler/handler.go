@@ -2,35 +2,27 @@ package handler
 
 import (
 	"loadbalancer/internal/proxy"
+	ratelimiter "loadbalancer/internal/rate_limiter"
 	"log/slog"
 	"net/http"
-	"time"
 )
 
-// лигрируем информацию о запросе
-func LoggingMiddleware(next http.Handler, log *slog.Logger) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-
-		next.ServeHTTP(w, r)
-
-		duration := time.Since(start)
-
-		log.Info("request processed",
-			slog.String("method", r.Method),
-			slog.String("path", r.URL.Path),
-			slog.String("remote_addr", r.RemoteAddr),
-			slog.String("user_agent", r.UserAgent()),
-			slog.String("duration", duration.String()),
-		)
-
-	})
-}
-
-func SetupHandler(proxyHandler *proxy.ReverseProxy, log *slog.Logger) http.Handler {
+func SetupHandlers(proxyHandler *proxy.ReverseProxy, rateLimiter *ratelimiter.RateLimiter, headerIP string, log *slog.Logger) http.Handler {
 	mux := http.NewServeMux()
+
+	mux.HandleFunc("POST /api/clients", createClientHandler(rateLimiter))
+	mux.HandleFunc("GET /api/clients/", getClientHandler(rateLimiter))
+	mux.HandleFunc("PUT /api/clients/", updateClientHandler(rateLimiter))
+	mux.HandleFunc("DELETE /api/clients/", deleteClientHandler(rateLimiter))
 
 	mux.Handle("/", proxyHandler)
 
-	return LoggingMiddleware(mux, log)
+	var handler http.Handler = mux
+	if rateLimiter != nil {
+		handler = RateLimiterMiddleware(rateLimiter, log, headerIP)(handler)
+	}
+	handler = LoggingMiddleware(handler, log)
+
+	return handler
+
 }
