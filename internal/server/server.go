@@ -18,7 +18,6 @@ type Server struct {
 	log    *slog.Logger
 }
 
-// feat: added HTTP server
 func New(handler http.Handler, cfg *config.HTTPServer, log *slog.Logger) *Server {
 	return &Server{
 		server: &http.Server{
