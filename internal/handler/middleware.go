@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"loadbalancer/internal/lib/api/response"
 	ratelimiter "loadbalancer/internal/rate_limiter"
 	"log/slog"
 	"net"
@@ -20,7 +21,7 @@ func RateLimiterMiddleware(
 			clientID := getClientID(r, headerIP)
 
 			if !limiter.Allow(clientID) {
-				http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
+				response.Error(w, http.StatusTooManyRequests, "Rate limit exeeded", log)
 				log.Warn("rate limit exeeded",
 					slog.String("client_id", clientID),
 					slog.String("path", r.URL.Path),

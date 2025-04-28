@@ -10,10 +10,10 @@ import (
 func SetupHandlers(proxyHandler *proxy.ReverseProxy, rateLimiter *ratelimiter.RateLimiter, headerIP string, log *slog.Logger) http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("POST /api/clients", createClientHandler(rateLimiter))
-	mux.HandleFunc("GET /api/clients/", getClientHandler(rateLimiter))
-	mux.HandleFunc("PUT /api/clients/", updateClientHandler(rateLimiter))
-	mux.HandleFunc("DELETE /api/clients/", deleteClientHandler(rateLimiter))
+	mux.HandleFunc("POST /api/clients", createClientHandler(rateLimiter, log))
+	mux.HandleFunc("GET /api/clients/", getClientHandler(rateLimiter, log))
+	mux.HandleFunc("PUT /api/clients/", updateClientHandler(rateLimiter, log))
+	mux.HandleFunc("DELETE /api/clients/", deleteClientHandler(rateLimiter, log))
 
 	mux.Handle("/", proxyHandler)
 

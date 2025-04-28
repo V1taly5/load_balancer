@@ -2,12 +2,14 @@ package handler
 
 import (
 	"encoding/json"
+	"loadbalancer/internal/lib/api/response"
 	ratelimiter "loadbalancer/internal/rate_limiter"
+	"log/slog"
 	"net/http"
 	"strings"
 )
 
-func createClientHandler(rl *ratelimiter.RateLimiter) http.HandlerFunc {
+func createClientHandler(rl *ratelimiter.RateLimiter, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			ClientID   string  `json:"client_id"`
@@ -16,29 +18,30 @@ func createClientHandler(rl *ratelimiter.RateLimiter) http.HandlerFunc {
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request", http.StatusBadRequest)
+			response.Error(w, http.StatusBadRequest, "Invalid request", log)
 			return
 		}
 
 		// проверяем существование клиента
 		if _, _, exists := rl.GetClient(req.ClientID); exists {
-			http.Error(w, "Client already exists", http.StatusConflict)
+			response.Error(w, http.StatusConflict, "Client already exists", log)
 			return
 		}
 
 		rl.SetClientLimit(req.ClientID, req.Capacity, req.RatePerSec)
+
 		w.WriteHeader(http.StatusCreated)
 	}
 }
 
-func getClientHandler(rl *ratelimiter.RateLimiter) http.HandlerFunc {
+func getClientHandler(rl *ratelimiter.RateLimiter, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/api/clients/")
 		clientID := strings.Split(path, "/")[0]
 
 		capacity, rate, exists := rl.GetClient(clientID)
 		if !exists {
-			http.Error(w, "Client not found", http.StatusNotFound)
+			response.Error(w, http.StatusNotFound, "Client not found", log)
 			return
 		}
 
@@ -50,7 +53,7 @@ func getClientHandler(rl *ratelimiter.RateLimiter) http.HandlerFunc {
 	}
 }
 
-func updateClientHandler(rl *ratelimiter.RateLimiter) http.HandlerFunc {
+func updateClientHandler(rl *ratelimiter.RateLimiter, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/api/clients/")
 		clientID := strings.Split(path, "/")[0]
@@ -61,12 +64,12 @@ func updateClientHandler(rl *ratelimiter.RateLimiter) http.HandlerFunc {
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request", http.StatusBadRequest)
+			response.Error(w, http.StatusBadRequest, "Invalid requst", log)
 			return
 		}
 
 		if err := rl.UpdateClientLimit(clientID, req.Capacity, req.RatePerSec); err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
+			response.Error(w, http.StatusNotFound, "Client not found", log)
 			return
 		}
 
@@ -74,13 +77,13 @@ func updateClientHandler(rl *ratelimiter.RateLimiter) http.HandlerFunc {
 	}
 }
 
-func deleteClientHandler(rl *ratelimiter.RateLimiter) http.HandlerFunc {
+func deleteClientHandler(rl *ratelimiter.RateLimiter, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/api/clients/")
 		clientID := strings.Split(path, "/")[0]
 
 		if _, _, exists := rl.GetClient(clientID); !exists {
-			http.Error(w, "Client not found", http.StatusNotFound)
+			response.Error(w, http.StatusNotFound, "Client not found", log)
 			return
 		}
 
