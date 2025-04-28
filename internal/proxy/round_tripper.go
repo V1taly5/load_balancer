@@ -27,12 +27,13 @@ func (rt *retryRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 			return nil, err
 		}
 
-		rt.log.Info("selected backend",
+		rt.log.Debug("selected backend",
 			slog.String("backendURL", backend.URL.String()),
 			slog.Int("backendAttempt", backendCount+1),
 		)
 
-		for retryBackend := 0; retryBackend < rt.maxRetries; retryBackend++ {
+		// for retryBackend := 0; retryBackend < rt.maxRetries; retryBackend++ {
+		for retryBackend := range rt.maxRetries {
 			reqCopy := req.Clone(req.Context())
 
 			reqCopy.URL.Scheme = backend.URL.Scheme
@@ -41,7 +42,7 @@ func (rt *retryRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 			reqCopy.Header.Add("X-Forwarded-Host", req.Host)
 			// reqCopy.Header.Add("X-Origin-Host", backend.URL.Host)
 
-			rt.log.Info("trying backend",
+			rt.log.Debug("trying backend",
 				slog.String("backendURL", backend.URL.String()),
 				slog.Int("backendCount", backendCount+1),
 				slog.Int("retryBackend", retryBackend+1),
