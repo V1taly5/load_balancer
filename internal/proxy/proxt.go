@@ -3,6 +3,7 @@ package proxy
 import (
 	"loadbalancer/internal/balancer"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"time"
@@ -20,13 +21,20 @@ func NewReverseProxy(balancer balancer.Balancer, log *slog.Logger) *ReverseProxy
 	}
 }
 
+var defaultTransport = &http.Transport{
+	DialContext:           (&net.Dialer{Timeout: 5 * time.Second}).DialContext,
+	TLSHandshakeTimeout:   5 * time.Second,
+	ResponseHeaderTimeout: 2 * time.Second,
+	ExpectContinueTimeout: 1 * time.Second,
+	IdleConnTimeout:       90 * time.Second,
+	MaxIdleConns:          100,
+	MaxIdleConnsPerHost:   10,
+}
+
 func (p *ReverseProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	transport := &retryRoundTripper{
-		next: &http.Transport{
-			ResponseHeaderTimeout: 2 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-		},
+		next:        defaultTransport,
 		maxRetries:  3,
 		maxBackends: 5,
 		balancer:    p.balanver,
