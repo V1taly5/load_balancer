@@ -18,6 +18,7 @@ func (b *Backend) IsDown() bool {
 	return b.isDown
 }
 
+// true == isDown
 func (b *Backend) SetHealth(healthy bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
