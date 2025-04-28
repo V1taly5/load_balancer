@@ -20,7 +20,7 @@ type retryRoundTripper struct {
 func (rt *retryRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	var lastErr error
 
-	for backendCount := 0; backendCount < rt.maxBackends; backendCount++ {
+	for backendCount := range rt.maxBackends {
 		backend, err := rt.balancer.Next()
 		if err != nil {
 			rt.log.Error("failed to get backend", sl.Err(err))
@@ -32,7 +32,6 @@ func (rt *retryRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 			slog.Int("backendAttempt", backendCount+1),
 		)
 
-		// for retryBackend := 0; retryBackend < rt.maxRetries; retryBackend++ {
 		for retryBackend := range rt.maxRetries {
 			reqCopy := req.Clone(req.Context())
 
