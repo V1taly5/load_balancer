@@ -15,6 +15,7 @@ type Config struct {
 	HealthChecker HealthChecker `yaml:"health_checker"`
 	RateLimiter   RateLimiter   `yaml:"rate_limiter"`
 	Storage       Storage       `yaml:"storage"`
+	Proxy         Proxy         `yaml:"proxy"`
 }
 
 type HTTPServer struct {
@@ -40,6 +41,23 @@ type RateLimiter struct {
 	CleanupInterval time.Duration `yaml:"cleanup_interval"`
 	BucketTTL       time.Duration `yaml:"bucket_ttl"`
 	HeaderIP        string        `yaml:"header_ip"`
+}
+
+type Proxy struct {
+	ProxyTransportOptions ProxyTransportOptions `yaml:"proxy_transport_options"`
+	MaxRetries            int                   `yaml:"max_retries"`
+	MaxBackends           int                   `yaml:"max_backends"`
+	ConnectionPoolSize    int                   `yaml:"connection_pool_size"`
+}
+
+type ProxyTransportOptions struct {
+	DialTimeout           time.Duration `yaml:"dial_timeout"`
+	TLSHandshakeTimeout   time.Duration `yaml:"tls_handshake_timeout"`
+	ResponseHeaderTimeout time.Duration `yaml:"response_header_timeout"`
+	ExpectContinueTimeout time.Duration `yaml:"expect_continue_timeout"`
+	IdleConnTimeout       time.Duration `yaml:"idle_conn_timeout"`
+	MaxIdleConns          int           `yaml:"max_idle_conns"`
+	MaxIdleConnsPerHost   int           `yaml:"max_idle_conns_per_host"`
 }
 
 type Storage struct {

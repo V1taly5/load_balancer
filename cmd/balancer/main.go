@@ -49,7 +49,8 @@ func main() {
 	healthChecker.Start()
 	defer healthChecker.Stop()
 
-	proxyHandler := proxy.NewReverseProxy(lb, log)
+	proxyHandler := proxy.NewReverseProxy(lb, log, cfg.Proxy)
+	defer proxyHandler.Close()
 
 	// только существующий файл
 	storage, err := storage.NewFileStorage(cfg.Storage.FilePath)
@@ -79,8 +80,8 @@ func main() {
 	if cfg.RateLimiter.Enabled {
 		headerIP = cfg.RateLimiter.HeaderIP
 	}
-	handler := handler.SetupHandlers(proxyHandler, rateLimiter, headerIP, log)
 
+	handler := handler.SetupHandlers(proxyHandler, rateLimiter, headerIP, log)
 	srv := server.New(handler, &cfg.Server, log)
 	if err := srv.Start(); err != nil {
 		log.Error("server error", sl.Err(err))

@@ -2,58 +2,61 @@ package proxy
 
 import (
 	"loadbalancer/internal/balancer"
+	"loadbalancer/internal/config"
 	"log/slog"
-	"net"
 	"net/http"
 	"net/http/httputil"
-	"time"
+	"sync"
 )
 
 type ReverseProxy struct {
-	balanver balancer.Balancer
-	log      *slog.Logger
+	balanver       balancer.Balancer
+	connectionPool *ConnectionPool
+	cfg            config.Proxy
+	log            *slog.Logger
 }
 
-// cейчас создается новый транспорт при каждом запросе, что не очень хорошо
-// по хорошему надо сделать транспорт переиспользуемым и наверное сделать pool транспортов
-func NewReverseProxy(balancer balancer.Balancer, log *slog.Logger) *ReverseProxy {
+func NewReverseProxy(balancer balancer.Balancer, log *slog.Logger, cfg config.Proxy) *ReverseProxy {
+
 	return &ReverseProxy{
-		balanver: balancer,
-		log:      log,
+		balanver:       balancer,
+		cfg:            cfg,
+		log:            log,
+		connectionPool: NewConnectionPool(cfg),
 	}
-}
-
-var defaultTransport = &http.Transport{
-	DialContext:           (&net.Dialer{Timeout: 5 * time.Second}).DialContext,
-	TLSHandshakeTimeout:   5 * time.Second,
-	ResponseHeaderTimeout: 2 * time.Second,
-	ExpectContinueTimeout: 1 * time.Second,
-	IdleConnTimeout:       90 * time.Second,
-	MaxIdleConns:          100,
-	MaxIdleConnsPerHost:   10,
 }
 
 func (p *ReverseProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
-	transport := &retryRoundTripper{
-		next:        defaultTransport,
-		maxRetries:  3,
-		maxBackends: 5,
-		balancer:    p.balanver,
-		log:         p.log,
-	}
 
 	p.log.Info("proxy request",
 		slog.String("method", r.Method),
 		slog.String("path", r.URL.Path),
 	)
 
+	transport := p.connectionPool.GetTransport()
+
+	retryTransport := &retryRoundTripper{
+		next:        transport,
+		maxRetries:  p.cfg.MaxRetries,
+		maxBackends: p.cfg.MaxBackends,
+		balancer:    p.balanver,
+		log:         p.log,
+		mu:          &sync.Mutex{},
+		pool:        p.connectionPool,
+	}
+
 	proxy := httputil.ReverseProxy{
 		Director: func(request *http.Request) {
 			request.Header.Add("X-Origin-Host", request.Host)
 		},
-		Transport: transport,
+		Transport: retryTransport,
 	}
 
 	proxy.ServeHTTP(w, r)
+}
+
+func (p *ReverseProxy) Close() {
+	if p.connectionPool != nil {
+		p.connectionPool.Close()
+	}
 }

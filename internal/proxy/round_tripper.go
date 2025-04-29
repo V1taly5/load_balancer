@@ -6,6 +6,7 @@ import (
 	"loadbalancer/internal/lib/sl"
 	"log/slog"
 	"net/http"
+	"sync"
 )
 
 type retryRoundTripper struct {
@@ -14,14 +15,27 @@ type retryRoundTripper struct {
 	maxBackends int
 	balancer    balancer.Balancer
 	// initBackend *balancer.Backend
-	log *slog.Logger
+	log  *slog.Logger
+	mu   *sync.Mutex
+	pool *ConnectionPool
 }
 
 func (rt *retryRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	var lastErr error
 
+	// возвращаем транспорт в pool по завершению запроса
+	defer func() {
+		if rt.pool != nil && rt.next != nil {
+			if transport, ok := rt.next.(*http.Transport); ok {
+				rt.pool.ReleaseTransport(transport)
+			}
+		}
+	}()
+
 	for backendCount := range rt.maxBackends {
+		rt.mu.Lock()
 		backend, err := rt.balancer.Next()
+		rt.mu.Unlock()
 		if err != nil {
 			rt.log.Error("failed to get backend", sl.Err(err))
 			return nil, err
@@ -39,7 +53,6 @@ func (rt *retryRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 			reqCopy.URL.Host = backend.URL.Host
 
 			reqCopy.Header.Add("X-Forwarded-Host", req.Host)
-			// reqCopy.Header.Add("X-Origin-Host", backend.URL.Host)
 
 			rt.log.Debug("trying backend",
 				slog.String("backendURL", backend.URL.String()),
@@ -74,7 +87,9 @@ func (rt *retryRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 				rt.log.Warn("marking backend as down",
 					slog.String("backendURL", backend.URL.String()),
 				)
+				rt.mu.Lock()
 				rt.balancer.MarkAsDown(backend)
+				rt.mu.Unlock()
 			}
 		}
 	}
