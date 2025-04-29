@@ -14,6 +14,8 @@ type ReverseProxy struct {
 	log      *slog.Logger
 }
 
+// cейчас создается новый транспорт при каждом запросе, что не очень хорошо
+// по хорошему надо сделать транспорт переиспользуемым и наверное сделать pool транспортов
 func NewReverseProxy(balancer balancer.Balancer, log *slog.Logger) *ReverseProxy {
 	return &ReverseProxy{
 		balanver: balancer,
