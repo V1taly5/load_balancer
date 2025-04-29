@@ -21,13 +21,30 @@ type FileStorage struct {
 }
 
 func NewFileStorage(filePath string) (*FileStorage, error) {
-	if _, err := os.Stat(filePath); err != nil {
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("file not found: %w", err)
 		} else {
 			return nil, fmt.Errorf("file verification error: %w", err)
 		}
 	}
+	if fileInfo.IsDir() {
+		return nil, fmt.Errorf("path is a directory, not a file")
+	}
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	if fileInfo.Size() != 0 {
+		var jsonData interface{}
+		if err := json.Unmarshal(data, &jsonData); err != nil {
+			return nil, fmt.Errorf("invalid JSON in file: %w", err)
+		}
+	}
+
 	return &FileStorage{filePath: filePath}, nil
 }
 
