@@ -25,6 +25,7 @@ func NewRoundRobinBalancer(log *slog.Logger) *RoundRobinBalancer {
 	}
 }
 
+// Возвращает следующий доступный бэкенд из списка бэкендов(rr.backends)
 func (rr *RoundRobinBalancer) Next() (*Backend, error) {
 	rr.mu.Lock()
 	defer rr.mu.Unlock()
@@ -79,6 +80,7 @@ func (rr *RoundRobinBalancer) checkDownBackends() {
 	}
 }
 
+// Добавляет новый бэкенд в список бэкендов, распределяемых балансировщиком
 func (rr *RoundRobinBalancer) AddBackend(backend Backend) {
 	rr.mu.Lock()
 	defer rr.mu.Unlock()
