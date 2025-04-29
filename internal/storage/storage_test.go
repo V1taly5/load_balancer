@@ -37,9 +37,19 @@ func createFileWithState(t *testing.T, clients map[string]*BucketState) string {
 func TestFileStorage(t *testing.T) {
 	t.Run("NewFileStorage", func(t *testing.T) {
 		t.Run("File does not exist", func(t *testing.T) {
-			_, err := NewFileStorage("non_existent_file.json")
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "file not found")
+			// не указывать нужные файлы
+			nonExistentPath := "non_existent_file.json"
+			os.Remove(nonExistentPath)
+
+			t.Cleanup(func() {
+				os.Remove(nonExistentPath)
+			})
+
+			storage, err := NewFileStorage(nonExistentPath)
+			require.NoError(t, err)
+			_, err = os.Stat(nonExistentPath)
+			require.NoError(t, err, "Expected file to be created")
+			require.NotNil(t, storage)
 		})
 
 		t.Run("File exists but is empty", func(t *testing.T) {

@@ -24,7 +24,21 @@ func NewFileStorage(filePath string) (*FileStorage, error) {
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("file not found: %w", err)
+			file, createErr := os.Create(filePath)
+			if createErr != nil {
+				return nil, fmt.Errorf("failed to create file: %w", createErr)
+			}
+			defer file.Close()
+
+			_, writeErr := file.Write([]byte("{}"))
+			if writeErr != nil {
+				return nil, fmt.Errorf("failed to write initial JSON to file: %w", writeErr)
+			}
+
+			fileInfo, err = os.Stat(filePath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to stat newly created file: %w", err)
+			}
 		} else {
 			return nil, fmt.Errorf("file verification error: %w", err)
 		}
